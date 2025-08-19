@@ -24,6 +24,17 @@ df = pd.DataFrame({
 df['Risco_Horas_Extras'] = (df['Horas_trabalhadas'] > 180).astype(int)
 
 # ----------------------------
+# Explicação breve
+# ----------------------------
+st.title("Dashboard de Médicos")
+st.markdown("""
+Bem-vindo ao dashboard! Aqui você pode analisar a carga de trabalho, cirurgias e risco de horas extras dos médicos.
+- **Clusters**: grupos de médicos com padrões similares de horas e cirurgias.
+- **Risco de horas extras**: classificado pelo modelo XGBoost.
+- **Importância das variáveis**: mostra o impacto das horas e cirurgias na classificação do risco.
+""")
+
+# ----------------------------
 # XGBoost Classificação
 # ----------------------------
 X = df[['Horas_trabalhadas','Cirurgias']]
@@ -43,22 +54,21 @@ kmeans = KMeans(n_clusters=n_clusters, random_state=42)
 df['Cluster'] = kmeans.fit_predict(X_scaled)
 
 # ----------------------------
-# Filtros e busca
+# Filtros e busca interativos
 # ----------------------------
-st.title("Dashboard Médicos")
-st.write("Visualização de risco e padrões de médicos.")
-
+st.sidebar.subheader("Filtros")
 cluster_filter = st.sidebar.multiselect("Selecione Cluster(s)", df['Cluster'].unique(), default=df['Cluster'].unique())
 risco_filter = st.sidebar.multiselect("Risco de Horas Extras", [0,1], default=[0,1])
-nome_filter = st.sidebar.text_input("Pesquisar por nome")
+nome_filter = st.sidebar.multiselect("Selecione Médicos", df['Medico'].unique(), default=df['Medico'].unique())
 
 df_filtered = df[
     (df['Cluster'].isin(cluster_filter)) & 
-    (df['Risco_Horas_Extras'].isin(risco_filter))
+    (df['Risco_Horas_Extras'].isin(risco_filter)) &
+    (df['Medico'].isin(nome_filter))
 ]
 
-if nome_filter:
-    df_filtered = df_filtered[df_filtered['Medico'].str.contains(nome_filter, case=False)]
+st.subheader(f"Médicos selecionados: {len(df_filtered)}")
+st.dataframe(df_filtered[['Medico','Horas_trabalhadas','Cirurgias','Risco_Horas_Extras','Cluster']])
 
 # ----------------------------
 # Visualização interativa
@@ -79,6 +89,9 @@ imp_df = pd.DataFrame({
     'Importancia': importances
 })
 st.bar_chart(imp_df.set_index('Variavel'))
+st.markdown("""
+> Observação: quanto maior a importância, maior o impacto daquela variável na previsão do risco de horas extras.
+""")
 
 # ----------------------------
 # Previsão de risco para novo médico
